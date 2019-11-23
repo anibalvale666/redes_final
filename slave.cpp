@@ -16,19 +16,14 @@
 #include <time.h>
 #include <map>
 #include <iterator>
+#include "auxiliary_function.h"
 
 using namespace std;
 
 int LengthSize = 4;
 
-string ConvertSize(int n, int tam){
-    string size = to_string(n);
-    if(size.length() < tam){
-        size = string(tam - size.length(), '0') + size;
-    }
-    return size;
-}
 
+//Variables globales
 multimap<string, string> NodeDB;
 
 multimap<string, string> RelationDB;
@@ -315,36 +310,44 @@ void ListeningForNewClients(int SocketI){//aun que solo tendre un unico gestor, 
 }
 
 
+//inicialiazacion del socket con el numero de puerto como parametro
+int init(int PuertoServer)
+{
+  int SocketI = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//creando la interfaz
+  if(SocketI == -1) {
+      perror("can not create socket");
+      exit(EXIT_FAILURE);
+  }
+
+  struct sockaddr_in SSocketAddr;
+
+  memset(&SSocketAddr, 0, sizeof(struct sockaddr_in));
+  SSocketAddr.sin_family = AF_INET;
+  SSocketAddr.sin_port = htons(PuertoServer);
+  SSocketAddr.sin_addr.s_addr = INADDR_ANY;
+
+  int status = bind(SocketI, (const struct sockaddr *)&SSocketAddr, sizeof(struct sockaddr_in));
+  if(status == -1){
+      perror("bind failed");
+      close(SocketI);
+      exit(EXIT_FAILURE);
+  }
+
+  status = listen(SocketI, 10);
+  if(status == -1) {
+      perror("listen failed");
+      close(SocketI);
+      exit(EXIT_FAILURE);
+  }
+  return SocketI;
+}
+
+
 int main(){
     int PuertoServer;//por el hecho de que probare en local host
     cout << "Introducir puerto para este servidor: ";
     cin >> PuertoServer;
-    int SocketI = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//creando la interfaz
-    if(SocketI == -1) {
-        perror("can not create socket");
-        exit(EXIT_FAILURE);
-    }
-
-    struct sockaddr_in SSocketAddr;
-
-    memset(&SSocketAddr, 0, sizeof(struct sockaddr_in));
-    SSocketAddr.sin_family = AF_INET;
-    SSocketAddr.sin_port = htons(PuertoServer);
-    SSocketAddr.sin_addr.s_addr = INADDR_ANY;
-
-    int status = bind(SocketI, (const struct sockaddr *)&SSocketAddr, sizeof(struct sockaddr_in));
-    if(status == -1){
-        perror("bind failed");
-        close(SocketI);
-        exit(EXIT_FAILURE);
-    }
-
-    status = listen(SocketI, 10);
-    if(status == -1) {
-        perror("listen failed");
-        close(SocketI);
-        exit(EXIT_FAILURE);
-    }
+    int SocketI = init(PuertoServer);
     cout << "iniciando servidor" << endl;
 
     thread EsperandoClients(ListeningForNewClients, SocketI);
