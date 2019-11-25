@@ -25,6 +25,7 @@ vector<string> split_into_words(string full_text)
             i = full_text.size();
         }
     }
+		cout<<"size: "<<res.size()<<endl;
 
     return res;
 }

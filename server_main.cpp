@@ -29,6 +29,8 @@ int LengthSize = 4;
 
 int NumeroServidores = 4;
 
+
+
 void show_menu()
 {
    cout<<"DISTRIBUTED DATABASE"<<endl;
@@ -59,7 +61,7 @@ int main()
 
        memset(&SSocketAddr, 0, sizeof(struct sockaddr_in));
        SSocketAddr.sin_family = AF_INET;
-       SSocketAddr.sin_port = htons(1100 + i);
+       SSocketAddr.sin_port = htons(1100);
 
        int In = inet_pton(AF_INET, "127.0.0.1", &SSocketAddr.sin_addr);
 
