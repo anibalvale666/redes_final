@@ -1,16 +1,14 @@
+#ifndef AUXILIARYFUNCTIONS_H
+#define AUXILIARYFUNCTIONS_H
+
+
+#include <string>
 #include <iostream>
 #include <vector>
-#include <string>
-#include "auxiliaryfunctions.h"
 
 using namespace std;
 
-AuxiliaryFunctions::AuxiliaryFunctions()
-{
-	
-}
-
-vector<string> AuxiliaryFunctions::split_into_words(string full_text)
+vector<string> split_into_words(string full_text)
 {
 	vector<string> res;
     int ianterior = 0;
@@ -28,18 +26,20 @@ vector<string> AuxiliaryFunctions::split_into_words(string full_text)
             i = full_text.size();
         }
     }
-   
+
     return res;
 }
 
-string AuxiliaryFunctions::size_to_string(int p_number, int p_size_string)
+string size_to_string(int p_number, int p_size_string)
 {
     string converted_number = to_string(p_number);
 
-    if(converted_number.size() < tam)
+    if(converted_number.size() < p_size_string)
     {
         converted_number = string(p_size_string - converted_number.size(), '0') + converted_number;
     }
 
     return converted_number;
 }
+
+#endif

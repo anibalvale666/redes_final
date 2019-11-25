@@ -16,7 +16,7 @@
 #include <time.h>
 #include <map>
 #include <iterator>
-#include "auxiliary_function.h"
+#include "auxiliaryfunctions.h"
 
 using namespace std;
 
@@ -49,7 +49,7 @@ void ImprimirServer(){
 void MandarMensaje(int SocketClient, string mensaje){
     cout << "Log mandando mensaje: " << SocketClient << " " << mensaje << endl;
     int sizetotal = mensaje.length();
-    string size = ConvertSize(sizetotal, LengthSize);
+    string size = size_to_string(sizetotal, LengthSize);
     int n = send(SocketClient, size.c_str(), size.length(), 0);
     if(n < 0){
         perror("Error sending to socket");
@@ -210,7 +210,7 @@ void ProccessMessage(int SocketClient, string mensaje){//necesito saber
             multimap<string, string>::iterator it = NodeDB.find(Nombre);
             if(it != NodeDB.end()){//encontre algo
                 string respuesta = "O";
-                string sizevalue = ConvertSize(it->second.length(), LengthSize);
+                string sizevalue = size_to_string(it->second.length(), LengthSize);
                 respuesta += sizevalue + it->second;
                 MandarMensaje(SocketClient, respuesta);//por ahora lo mando de regreso
             }
@@ -233,10 +233,10 @@ void ProccessMessage(int SocketClient, string mensaje){//necesito saber
                     vecinos.push_back(it->second);
                 }
                 string numerovecinos = to_string(vecinos.size());
-                string sizenumerovecinos = ConvertSize(numerovecinos.size(), LengthSize);
+                string sizenumerovecinos = size_to_string(numerovecinos.size(), LengthSize);
                 respuesta += sizenumerovecinos + numerovecinos;
                 for(int i = 0; i < vecinos.size(); i++){
-                    string sizevecino = ConvertSize(vecinos[i].length(), LengthSize);
+                    string sizevecino = size_to_string(vecinos[i].length(), LengthSize);
                     respuesta += sizevecino + vecinos[i];
                 }
                 MandarMensaje(SocketClient, respuesta);//por ahora lo mando de regreso
