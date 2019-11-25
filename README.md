@@ -48,4 +48,5 @@ class Slave
 COMPILADO
 
 g++ slave.cpp -o slave.out -std=c++11 -lpthread
+
 g++ client.cpp -o client.out -std=c++11 -lpthread
