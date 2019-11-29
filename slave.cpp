@@ -22,7 +22,6 @@ using namespace std;
 
 int LengthSize = 4;
 
-
 //Variables globales
 multimap<string, string> NodeDB;
 
@@ -32,7 +31,7 @@ vector<int> ClientSockets;
 
 vector<thread> ThreadsRecibiendo;
 
-void ImprimirServer(){
+void PrintInfoServer(){
     cout << "Nodos" << endl;
     cout << "Nombre\tValor" << endl;
     for(multimap<string, string>::iterator it = NodeDB.begin(); it != NodeDB.end(); it++){
@@ -46,10 +45,28 @@ void ImprimirServer(){
     }
 }
 
-void MandarMensaje(int SocketClient, string mensaje){
-    cout << "Log mandando mensaje: " << SocketClient << " " << mensaje << endl;
+
+
+
+void PrintNode(){
+  cout << "Nodos" << endl;
+  cout << "Nombre\tValor" << endl;
+  for(multimap<string, string>::iterator it = NodeDB.begin(); it != NodeDB.end(); it++){
+      cout << it->first << "\t" << it->second << endl;
+  }
+}
+
+void PrintNodeRelations(){
+  cout << "Relaciones" << endl;
+  cout << "Nombre 1 \tNombre 2" << endl;
+  for(multimap<string, string>::iterator it = RelationDB.begin(); it != RelationDB.end(); it++){
+      cout << it->first << "\t" << it->second << endl;
+  }
+}
+
+void SendMssg(int SocketClient, string mensaje){
     int sizetotal = mensaje.length();
-    string size = ConvertSize(sizetotal, LengthSize);
+    string size = size_to_string(sizetotal, LengthSize);
     int n = send(SocketClient, size.c_str(), size.length(), 0);
     if(n < 0){
         perror("Error sending to socket");
@@ -62,69 +79,91 @@ void MandarMensaje(int SocketClient, string mensaje){
 }
 
 
-void ProccessMessage(int SocketClient, string mensaje){//necesito saber
-    //ifs segun el tipo de mesnsaje
-    if(mensaje[0] == 'I'){//diferentes comandos
-        //procesar comando
-        cout << mensaje << endl;
-        if(mensaje[1] == 'N'){
+void ProccessMessage(int SocketClient, string mensaje)
+{
+    //Command Insert received
+    if(mensaje[0] == '1')
+    {
+        //cout << mensaje << endl;
+        //Code Node received
+        if(mensaje[1] == '1')
+        {
+            cout<<"[Slave said: Inserting new node.]"<<endl;
+            //Splitting data into name and value
             int TamNombre = stoi(mensaje.substr(2, LengthSize));
             string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
             int TamValue = stoi(mensaje.substr(2 + LengthSize + TamNombre, LengthSize));
             string Value = mensaje.substr(2 + LengthSize + TamNombre + LengthSize, TamValue);
             multimap<string, string>::iterator it = NodeDB.find(Nombre);
-            if(it == NodeDB.end()){//encontre algo
+
+            if (it == NodeDB.end())
+            {
                 string respuesta = "O";
                 NodeDB.insert(pair<string, string>(Nombre, Value));
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
+                SendMssg(SocketClient, respuesta);
             }
-            else{
-                MandarMensaje(SocketClient, "E");//el nodo no existia
+
+            else
+            {
+                SendMssg(SocketClient, "E");
             }
+
+            PrintNode();
         }
-        else if(mensaje[1] == 'R'){
+
+        else if(mensaje[1] == '2')
+        {
+            cout<<"[Slave said: Inserting new relationship.]"<<endl;
             int TamNombre1 = stoi(mensaje.substr(2, LengthSize));
             string Nombre1 = mensaje.substr(2 + LengthSize, TamNombre1);
             int TamNombre2 = stoi(mensaje.substr(2 + LengthSize + TamNombre1, LengthSize));
             string Nombre2 = mensaje.substr(2 + LengthSize + TamNombre1 + LengthSize, TamNombre2);
             multimap<string, string>::iterator it1 = NodeDB.find(Nombre1);
-            //multimap<string, string>::iterator it2 = NodeDB.find(Nombre2);//no debo verificar el segund nodo
-            if(it1 == NodeDB.end()){//encontre algo
+            if(it1 == NodeDB.end())
+            {//encontre algo
                 string respuesta = "E";
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
+                SendMssg(SocketClient, respuesta);//borrado con exito
             }
             /*else if(it2 == NodeDB.end()){
                 string respuesta = "E";
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
+                SendMssg(SocketClient, respuesta);//borrado con exito
             }*/
-            else{
+            else
+            {
                 //busco por rango el nombre 1
                 //dentro de los resultados veo si esta nombre 2, si esta no inserto, si no esta inserto
                 pair<multimap<string,string>::iterator, multimap<string, string>::iterator> range = RelationDB.equal_range(Nombre1);
                 bool ExistRelation = false;
-                for(multimap<string, string>::iterator it = range.first; it != range.second; it++){
-                    if(it->second == Nombre2){
+                for(multimap<string, string>::iterator it = range.first; it != range.second; it++)
+                {
+                    if(it->second == Nombre2)
+                    {
                         ExistRelation = true;
                     }
                 }
-                if(!ExistRelation){
+                if(!ExistRelation)
+                {
                     RelationDB.insert(pair<string, string>(Nombre1, Nombre2));
                     string respuesta = "O";
-                    MandarMensaje(SocketClient, respuesta);//borrado con exito
+                    SendMssg(SocketClient, respuesta);//borrado con exito
                 }
-                else{
+                else
+                {
                     string respuesta = "E";
-                    MandarMensaje(SocketClient, respuesta);//borrado con exito
+                    SendMssg(SocketClient, respuesta);//borrado con exito
                 }
             }
+            PrintNodeRelations();
         }
         //mandar respuesta
-        //MandarMensaje(SocketClient, mensaje);//por ahora lo mando de regreso
+        //SendMssg(SocketClient, mensaje);//por ahora lo mando de regreso
     }
-    else if(mensaje[0] == 'U'){
+    else if(mensaje[0] == '2')
+    {
+        cout<<"[Slave said: Updating node.]"<<endl;
         //procesar comando
-        cout << mensaje << endl;
-        if(mensaje[1] == 'N'){
+        //cout << mensaje << endl;
+        if(mensaje[1] == '1'){
             int TamNombre = stoi(mensaje.substr(2, LengthSize));
             string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
             int TamValue = stoi(mensaje.substr(2 + LengthSize + TamNombre, LengthSize));
@@ -133,48 +172,62 @@ void ProccessMessage(int SocketClient, string mensaje){//necesito saber
             if(it != NodeDB.end()){//encontre algo
                 string respuesta = "O";
                 it->second = Value;
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
+                SendMssg(SocketClient, respuesta);//borrado con exito
             }
             else{
-                MandarMensaje(SocketClient, "E");//el nodo no existia
+                SendMssg(SocketClient, "E");//el nodo no existia
             }
+            PrintNode();
         }
-        else if(mensaje[1] == 'R'){
-
+        else if(mensaje[1] == '2')
+        {
+            //Working on it
+          //PrintNodeRelations();
         }
         //mandar respuesta
     }
-    else if(mensaje[0] == 'D'){
+    else if(mensaje[0] == '3')
+    {
+        cout<<"[Slave said: Erasing node.]"<<endl;
         //procesar comando
-        cout << mensaje << endl;
-        if(mensaje[1] == 'N'){
+        //cout << mensaje << endl;
+        if(mensaje[1] == '1')
+        {
             int TamNombre = stoi(mensaje.substr(2, LengthSize));
             string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
             multimap<string, string>::iterator it = NodeDB.find(Nombre);
             if(it != NodeDB.end()){//encontre algo
                 string respuesta = "O";
                 NodeDB.erase(it);
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
+                SendMssg(SocketClient, respuesta);//borrado con exito
             }
             else{
-                MandarMensaje(SocketClient, "E");//el nodo no existia
+                SendMssg(SocketClient, "E");//el nodo no existia
             }
+            PrintNode();
         }
-        else if(mensaje[1] == 'R'){
+        else if(mensaje[1] == '2')
+        {
             int TamNombre1 = stoi(mensaje.substr(2, LengthSize));
             string Nombre1 = mensaje.substr(2 + LengthSize, TamNombre1);
             int TamNombre2 = stoi(mensaje.substr(2 + LengthSize + TamNombre1, LengthSize));
             string Nombre2 = mensaje.substr(2 + LengthSize + TamNombre1 + LengthSize, TamNombre2);
-            multimap<string, string>::iterator it1 = RelationDB.find(Nombre1);
+            multimap<string, string>::iterator it1 = NodeDB.find(Nombre1);
             multimap<string, string>::iterator it2 = NodeDB.find(Nombre2);//debo ver que existan los nodso
             if(it1 == NodeDB.end()){//encontre algo
                 string respuesta = "E";
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
-            }
+                cout<<"NO ENCONTRO NOMBRE 1 EN RELATION DB"<<endl;
+                SendMssg(SocketClient, respuesta);//borrado con exito
+            }/*
             else if(it2 == NodeDB.end()){
                 string respuesta = "E";
-                MandarMensaje(SocketClient, respuesta);//borrado con exito
-            }
+                cout<<"NO ENCONTRO NOMBRE 2 EN NODE DB"<<endl;
+                cout<<Nombre2<<endl;
+                for(auto it = NodeDB.begin(); it != NodeDB.end(); it++){
+                	cout<<it->first<<" :"<<it->second<<endl; 
+                }
+                SendMssg(SocketClient, respuesta);//borrado con exito
+            }*/
             else{
                 //busco por rango el nombre 1
                 //dentro de los resultados veo si esta nombre 2, si esta no inserto, si no esta inserto
@@ -190,69 +243,23 @@ void ProccessMessage(int SocketClient, string mensaje){//necesito saber
                 if(ExistRelation){
                     RelationDB.erase(iterase);
                     string respuesta = "O";
-                    MandarMensaje(SocketClient, respuesta);//borrado con exito
+                    SendMssg(SocketClient, respuesta);//borrado con exito
                 }
                 else{
+                	cout<<"NO EXISTE RELATION EBNTRE N1 Y N2"<<endl;
                     string respuesta = "E";
-                    MandarMensaje(SocketClient, respuesta);//borrado con exito
+                    SendMssg(SocketClient, respuesta);//borrado con exito
                 }
             }
-
+            PrintNodeRelations();
         }
         //mandar respuesta
     }
-    else if(mensaje[0] == 'Q'){
-        //procesar comando
-        cout << mensaje << endl;
-        if(mensaje[1] == 'N'){
-            int TamNombre = stoi(mensaje.substr(2, LengthSize));
-            string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
-            multimap<string, string>::iterator it = NodeDB.find(Nombre);
-            if(it != NodeDB.end()){//encontre algo
-                string respuesta = "O";
-                string sizevalue = ConvertSize(it->second.length(), LengthSize);
-                respuesta += sizevalue + it->second;
-                MandarMensaje(SocketClient, respuesta);//por ahora lo mando de regreso
-            }
-            else{
-                MandarMensaje(SocketClient, "E");//por ahora lo mando de regreso
-            }
-        }
-        else if(mensaje[1] == 'R'){//para devolver los vecinos inmediatos
-            int TamNombre = stoi(mensaje.substr(2, LengthSize));
-            string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
-            multimap<string, string>::iterator it = NodeDB.find(Nombre);
-            if(it != NodeDB.end()){//encontre algo
-                string respuesta = "L";
-                pair<multimap<string,string>::iterator, multimap<string, string>::iterator> range = RelationDB.equal_range(Nombre);
-                bool ExistRelation = false;
-                multimap<string, string>::iterator iterase;
-                vector<string> vecinos;
-                for(multimap<string, string>::iterator it = range.first; it != range.second; it++){
-                    //tengo que agregarlos al comando
-                    vecinos.push_back(it->second);
-                }
-                string numerovecinos = to_string(vecinos.size());
-                string sizenumerovecinos = ConvertSize(numerovecinos.size(), LengthSize);
-                respuesta += sizenumerovecinos + numerovecinos;
-                for(int i = 0; i < vecinos.size(); i++){
-                    string sizevecino = ConvertSize(vecinos[i].length(), LengthSize);
-                    respuesta += sizevecino + vecinos[i];
-                }
-                MandarMensaje(SocketClient, respuesta);//por ahora lo mando de regreso
-            }
-            else{
-                MandarMensaje(SocketClient, "E");//por ahora lo mando de regreso
-            }
-
-        }
-        //mandar respuesta
-    }
-    ImprimirServer();
+    //PrintInfoServer();
 }
 
 
-void RecibiendoCliente(int SocketClient){
+void Rcv_Client(int SocketClient){
     //recibo mensajes hasta hartarme, proceso la consulta y la devuelvo, este si es de enfoque tradicionarl
     int n;
     char * buffersize = new char [LengthSize];
@@ -274,7 +281,7 @@ void RecibiendoCliente(int SocketClient){
 
             if(n>0){
                 string smensaje (buffermensaje, size);
-                cout << "Mensaje recibido del cliente: " << smensaje << endl;
+                //cout << "Mensaje recibido del cliente: " << smensaje << endl;
                 ProccessMessage(SocketClient, smensaje);
 
             }
@@ -286,8 +293,8 @@ void RecibiendoCliente(int SocketClient){
 }
 
 ////debo escuchar clientes, puede haber varios gestores
-void ListeningForNewClients(int SocketI){//aun que solo tendre un unico gestor, no se si necesite esto
-    cout << "Listening" << endl;
+void Listening(int SocketI){//aun que solo tendre un unico gestor, no se si necesite esto
+    cout<<"[Slave status: Connected.]"<<endl;
     while(true){
         int in;
         in = accept(SocketI, NULL, NULL);//no conozco al participante activo
@@ -299,9 +306,9 @@ void ListeningForNewClients(int SocketI){//aun que solo tendre un unico gestor, 
         }
         else{
             ClientSockets.push_back(in);
-            //thread ThreadRecibiendoCliente;
-            //ThreadRecibiendoCliente = thread(RecibiendoCliente, in);
-            ThreadsRecibiendo.push_back(thread(RecibiendoCliente, in));
+            //thread ThreadRcv_Client;
+            //ThreadRcv_Client = thread(Rcv_Client, in);
+            ThreadsRecibiendo.push_back(thread(Rcv_Client, in));
 
             //ThreadsEnviandoCliente.push_back(ThreadEnviando);
             //solo deberia haber un enviando
@@ -311,7 +318,7 @@ void ListeningForNewClients(int SocketI){//aun que solo tendre un unico gestor, 
 
 
 //inicialiazacion del socket con el numero de puerto como parametro
-int init(int PuertoServer)
+int init(int slave_port)
 {
   int SocketI = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//creando la interfaz
   if(SocketI == -1) {
@@ -323,7 +330,7 @@ int init(int PuertoServer)
 
   memset(&SSocketAddr, 0, sizeof(struct sockaddr_in));
   SSocketAddr.sin_family = AF_INET;
-  SSocketAddr.sin_port = htons(PuertoServer);
+  SSocketAddr.sin_port = htons(slave_port);
   SSocketAddr.sin_addr.s_addr = INADDR_ANY;
 
   int status = bind(SocketI, (const struct sockaddr *)&SSocketAddr, sizeof(struct sockaddr_in));
@@ -344,15 +351,16 @@ int init(int PuertoServer)
 
 
 int main(){
-    int PuertoServer;//por el hecho de que probare en local host
-    cout << "Introducir puerto para este servidor: ";
-    cin >> PuertoServer;
-    int SocketI = init(PuertoServer);
-    cout << "iniciando servidor" << endl;
+    int slave_port;
+    cout<<"SLAVE"<<endl;
+    cout<<"Port Number: ";
+    cin >> slave_port;
+    int SocketI = init(slave_port);
 
-    thread EsperandoClients(ListeningForNewClients, SocketI);
+    thread EsperandoClients(Listening, SocketI);
 
-    for(int i = 0; i < ThreadsRecibiendo.size(); i++){
+    for(int i = 0; i < ThreadsRecibiendo.size(); i++)
+    {
         ThreadsRecibiendo[i].join();
     }
 
