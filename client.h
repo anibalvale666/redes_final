@@ -100,24 +100,24 @@ int Client::hash_function(string text)
 
 void Client::parse_input(vector<string> words_input_text)
 {
-    if (words_input_text[0][0] == 'i')
+    if (words_input_text[0] == 'insert')
     {
         operation_insert(words_input_text);
     }
-    else if (words_input_text[0][0] == 'u')
+    else if (words_input_text[0] == 'update')
     {
         operation_update(words_input_text);
     }
-    else if (words_input_text[0][0] == 'd')
+    else if (words_input_text[0] == 'delete')
     {
         operation_delete(words_input_text);
         //cout<<"words_input_text: Delete"<<endl;
     }
-    else if (words_input_text[0][0] == 'q')
+    else if (words_input_text[0] == 'query')
     {
         cout<<"Comando: Query"<<endl;
     }
-    else if (words_input_text[0][0] == 'k'){
+    else if (words_input_text[0] == 'keep'){
         send_keep_alive();
     }
 }
