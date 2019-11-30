@@ -27,6 +27,12 @@ multimap<string, string> NodeDB;
 
 multimap<string, string> RelationDB;
 
+
+//redundancia
+multimap<string, string> NodeDB_redundancy;
+
+multimap<string, string> RelationDB_redundancy;
+
 vector<int> ClientSockets;
 
 vector<thread> ThreadsRecibiendo;
@@ -44,9 +50,6 @@ void PrintInfoServer(){
         cout << it->first << "\t" << it->second << endl;
     }
 }
-
-
-
 
 void PrintNode(){
   cout << "Nodos" << endl;
@@ -103,6 +106,7 @@ void ProccessMessage(int SocketClient, string mensaje)
                 SendMssg(SocketClient, respuesta);
             }
 
+
             else
             {
                 SendMssg(SocketClient, "E");
@@ -130,6 +134,7 @@ void ProccessMessage(int SocketClient, string mensaje)
             }*/
             else
             {
+
                 //busco por rango el nombre 1
                 //dentro de los resultados veo si esta nombre 2, si esta no inserto, si no esta inserto
                 pair<multimap<string,string>::iterator, multimap<string, string>::iterator> range = RelationDB.equal_range(Nombre1);
@@ -224,7 +229,7 @@ void ProccessMessage(int SocketClient, string mensaje)
                 cout<<"NO ENCONTRO NOMBRE 2 EN NODE DB"<<endl;
                 cout<<Nombre2<<endl;
                 for(auto it = NodeDB.begin(); it != NodeDB.end(); it++){
-                	cout<<it->first<<" :"<<it->second<<endl; 
+                	cout<<it->first<<" :"<<it->second<<endl;
                 }
                 SendMssg(SocketClient, respuesta);//borrado con exito
             }*/
@@ -255,11 +260,48 @@ void ProccessMessage(int SocketClient, string mensaje)
         }
         //mandar respuesta
     }
-    else if(mensaje[0] == '6'){
-        cout<<"CHECK IF ALIVE"<<endl;
-        // SendMssg(SocketClient, mensaje);
+    else if(mensaje[0] == '4')
+    {
+      int TamNombre = stoi(mensaje.substr(2, LengthSize));
+      string Nombre = mensaje.substr(2 + LengthSize, TamNombre);
+      int TamValue = stoi(mensaje.substr(2 + LengthSize + TamNombre, LengthSize));
+      string Value = mensaje.substr(2 + LengthSize + TamNombre + LengthSize, TamValue);
+      multimap<string, string>::iterator it = NodeDB.find(Nombre);
+      if(it != NodeDB.end()){//encontre algo
+          string respuesta = "O";
+          it->second = Value;
+          SendMssg(SocketClient, respuesta);//borrado con exito
+      }
+      else{
+          SendMssg(SocketClient, "E");//el nodo no existia
+      }
+    }
+    //explorationn
+    else if(mensaje[0] == '5')
+    {
+      cout<<"[Slave said: exploration node .]"<<endl;
+      int TamNombre = stoi(mensaje.substr(1, LengthSize));
+      string Nombre = mensaje.substr(1 + LengthSize, TamNombre);
+
+      vector<string> relation_nodes;
+      pair<multimap<string,string>::iterator, multimap<string, string>::iterator> range = RelationDB.equal_range(Nombre);
+
+      for(multimap<string, string>::iterator it = range.first; it != range.second; it++)
+      {
+        relation_nodes.push_back(it->second);
+      }
+
+      //enviamos todos los nodos;
+      string respuesta = "5" + mensaje.substr(1, LengthSize) + Nombre + size_to_string(relation_nodes.size(),LengthSize) ;
+      for(int i = 0;i<relation_nodes.size();i++)
+      {
+        respuesta += size_to_string(relation_nodes[i].size(),LengthSize) + relation_nodes[i];
+      }
+      //cout << respuesta << endl;
+      SendMssg(SocketClient, respuesta);//borrado con exito
     }
     //PrintInfoServer();
+
 }
 
 
