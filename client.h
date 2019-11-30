@@ -124,8 +124,6 @@ void Client::parse_input(vector<string> words_input_text)
 
 void Client::send_keep_alive(){
     for(int i = 0; i<sockets_servers.size(); i++){
-        string msg = "6";
-        msg += size_to_string(sockets_servers[i], 4);
         char buf;
         int alive = -1;
         alive = (recv(sockets_servers[i], &buf, 1, MSG_PEEK | MSG_DONTWAIT) == 0) ? 0 : 1;
