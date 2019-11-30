@@ -255,6 +255,10 @@ void ProccessMessage(int SocketClient, string mensaje)
         }
         //mandar respuesta
     }
+    else if(mensaje[0] == '6'){
+        cout<<"CHECK IF ALIVE"<<endl;
+        // SendMssg(SocketClient, mensaje);
+    }
     //PrintInfoServer();
 }
 

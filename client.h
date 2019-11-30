@@ -37,7 +37,7 @@ public:
 	void send_keep_alive();
 	void parse_input(vector<string> words_input_text);
     int hash_function(string text);
-    void send_command(int client_socket, string command_to_send);
+    bool send_command(int client_socket, string command_to_send);
     string receive_command(int client_socket);
     void operation_insert(vector<string> list_words_input);
     void operation_update(vector<string> list_words_input);
@@ -117,6 +117,18 @@ void Client::parse_input(vector<string> words_input_text)
     {
         cout<<"Comando: Query"<<endl;
     }
+    else if (words_input_text[0][0] == 'k'){
+        send_keep_alive();
+    }
+}
+
+void Client::send_keep_alive(){
+    for(int i = 0; i<sockets_servers.size(); i++){
+        string msg = "6";
+        msg += size_to_string(sockets_servers[i], 4);
+        bool alive = send_command(sockets_servers[i], msg);
+        cout<<"server # "<<i<<" (socket # "<<sockets_servers[i]<<" ) alive: "<<alive<<endl;
+    }
 }
 
 void Client::operation_insert(vector<string> list_words_input)
@@ -189,23 +201,24 @@ void Client::operation_insert(vector<string> list_words_input)
     }
 }
 
-void Client::send_command(int client_socket, string command_to_send)
+bool Client::send_command(int client_socket, string command_to_send)
 {
+    char buf;
+    int alive = recv(client_socket, &buf, 1, MSG_PEEK | MSG_DONTWAIT);
+    if (alive == 0){
+        return false;
+    }
     string command_size = size_to_string(command_to_send.size(), fixed_command_size);
-
     int n = send(client_socket, command_size.c_str(), command_size.size(), 0);
-
     if(n < 0)
     {
         perror("Error sending to socket");
     }
-
-    n = send(client_socket, command_to_send.c_str(), command_to_send.size(), 0);
-
     if(n < 0)
     {
         perror("Error sending to socket");
-    }
+    }   
+    return true;
 }
 
 string Client::receive_command(int client_socket)
