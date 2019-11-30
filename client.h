@@ -42,12 +42,15 @@ public:
     void operation_insert(vector<string> list_words_input);
     void operation_update(vector<string> list_words_input);
     void operation_delete(vector<string> list_words_input);
+    void operation_exploration(vector<string> list_words_input);
+    vector<string> get_relations(string server_reply);
+    bool is_visited(string node, vector<string> & vector_nodes);
 };
 
 Client::Client()
 {
     fixed_command_size = 4;
-    number_servers = 2;
+    number_servers = 1;
 }
 
 void Client::connect_with_slaves()
@@ -70,6 +73,7 @@ void Client::connect_with_slaves()
         //SSocketAddr.sin_addr.s_addr = INADDR_ANY;
 
         int In = inet_pton(AF_INET, "127.0.0.1", &SSocketAddr.sin_addr);
+        //int In = inet_pton(AF_INET, "172.20.10.7", &SSocketAddr.sin_addr);
 
         if (In < 0) {
             perror("first parameter is not a valid address family");
@@ -100,34 +104,22 @@ int Client::hash_function(string text)
 
 void Client::parse_input(vector<string> words_input_text)
 {
-    if (words_input_text[0] == 'insert')
+    if (words_input_text[0][0] == 'i')
     {
         operation_insert(words_input_text);
     }
-    else if (words_input_text[0] == 'update')
+    else if (words_input_text[0][0] == 'u')
     {
         operation_update(words_input_text);
     }
-    else if (words_input_text[0] == 'delete')
+    else if (words_input_text[0][0] == 'd')
     {
         operation_delete(words_input_text);
         //cout<<"words_input_text: Delete"<<endl;
     }
-    else if (words_input_text[0] == 'query')
+    else if (words_input_text[0][0] == 'e')
     {
-        cout<<"Comando: Query"<<endl;
-    }
-    else if (words_input_text[0] == 'keep'){
-        send_keep_alive();
-    }
-}
-
-void Client::send_keep_alive(){
-    for(int i = 0; i<sockets_servers.size(); i++){
-        char buf;
-        int alive = -1;
-        alive = (recv(sockets_servers[i], &buf, 1, MSG_PEEK | MSG_DONTWAIT) == 0) ? 0 : 1;
-        cout<<"server # "<<i<<" (socket # "<<sockets_servers[i]<<" ) alive: "<<alive<<endl;
+        operation_exploration(words_input_text);
     }
 }
 
@@ -204,11 +196,16 @@ void Client::operation_insert(vector<string> list_words_input)
 void Client::send_command(int client_socket, string command_to_send)
 {
     string command_size = size_to_string(command_to_send.size(), fixed_command_size);
+
     int n = send(client_socket, command_size.c_str(), command_size.size(), 0);
+
     if(n < 0)
     {
         perror("Error sending to socket");
     }
+
+    n = send(client_socket, command_to_send.c_str(), command_to_send.size(), 0);
+
     if(n < 0)
     {
         perror("Error sending to socket");
@@ -338,5 +335,143 @@ void Client::operation_delete(vector<string> list_words_input)
     }
 }
 
+void Client::operation_exploration(vector<string> list_words_input)
+{
+    int depth = stoi(list_words_input[2]);
+    //depth += 1;
 
-#endif
+    cout<<"Depth: "<<depth<<endl;
+
+    int socket_dest = hash_function(list_words_input[1]);
+    string to_send = "5";
+    to_send += size_to_string(list_words_input[1].size(), fixed_command_size);
+    to_send += list_words_input[1];
+
+    cout<<"Sending: "<<to_send<<endl;
+    
+    send_command(sockets_servers[socket_dest], to_send);
+
+    string server_reply = receive_command(sockets_servers[socket_dest]);
+
+    cout<<"Reply: "<<server_reply<<endl;
+    //50001A00010001B
+
+    vector<string> relations = get_relations(server_reply);
+
+    vector<string> visited_nodes = relations;
+    visited_nodes.push_back(list_words_input[1]);
+
+    int count_depth = 0;
+
+    int size_show = relations.size();
+
+    string curr_node = list_words_input[1];
+
+    while ((relations.size() != 0) and (count_depth < depth))
+    {
+        cout<<"Level "<<count_depth + 1<<endl;
+
+        for (int i=0; i<size_show; i++)
+        {
+            cout<<relations[i]<<endl;
+        }
+
+        for (int aa = 0; aa < relations.size(); aa++)
+        {
+            int new_socket_dest = hash_function(relations[aa]);
+            string new_to_send = "5";
+            new_to_send += size_to_string(relations[aa].size(), fixed_command_size);
+            new_to_send += relations[aa];
+
+        //cout<<"Sending: "<<new_to_send<<endl;
+
+            send_command(sockets_servers[new_socket_dest], new_to_send);
+
+            string new_server_reply = receive_command(sockets_servers[new_socket_dest]);
+
+            //cout<<"Reply: "<<new_server_reply<<endl;    
+
+            vector<string> new_relations = get_relations(new_server_reply);
+            vector<string>::iterator it = new_relations.begin();
+            for(it = new_relations.begin(); i)
+            for (int k=0; k<new_relations.size(); k++)
+            {
+                if (!is_visited(new_relations[k], visited_nodes))
+                {   
+                    cout<<"News"<<endl;
+                    cout<<new_relations[k]<<endl;
+                    visited_nodes.push_back(new_relations[k]);
+                    relations.push_back(new_relations[k]);
+                }
+            }
+        }
+        
+
+        
+/*
+        for (int i=0; i<relations.size(); i++)
+        {
+            cout<<relations[i]<<endl;
+        }
+*/
+        relations.erase(relations.begin());
+
+        size_show = relations.size();
+    
+        count_depth += 1;
+    }
+    
+}
+
+vector<string> Client::get_relations(string server_reply)
+{
+    if (server_reply[0] == '5') 
+    {
+        string size_str = server_reply.substr(1, fixed_command_size);
+        int size_node = stoi(size_str);
+        
+        string name_str = server_reply.substr(1 + fixed_command_size, size_node);
+
+        string size_relations_str = server_reply.substr(1 + fixed_command_size + size_node, fixed_command_size);
+        int size_relations = stoi(size_relations_str);
+
+        vector<string> node_names;
+        int prev_pos = 1 + fixed_command_size + size_node + fixed_command_size;
+
+        for (int i=0; i < size_relations; i++)
+        {
+            string temp_size_str = server_reply.substr(prev_pos, fixed_command_size);
+            int temp_size = stoi(temp_size_str);
+
+            prev_pos += fixed_command_size;
+
+            string temp_name = server_reply.substr(prev_pos, temp_size);
+
+            node_names.push_back(temp_name);
+
+            prev_pos += temp_size;
+        }
+
+        cout<<"Nodos "<<name_str<<endl;
+        for (int i=0; i<node_names.size(); i++)
+        {
+            cout<<node_names[i]<<endl;
+        }
+
+        return node_names;
+    }
+}
+
+bool Client::is_visited(string node, vector<string> & vector_nodes)
+{
+    for (int i=0; i < vector_nodes.size(); i++)
+    {
+        if (vector_nodes[i] == node)
+            return true;
+    }
+
+    return false;
+}
+
+
+#endif 
